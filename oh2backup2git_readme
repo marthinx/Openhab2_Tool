@@ -1,0 +1,80 @@
+ 
+https://community.openhab.org/t/automatic-backup-openhab2-via-git-to-bitbucket-free/33798
+ 
+reliable nowadays.
+
+Ok, so here is my quick write-up:
+
+***I’m running this on a Raspberry Pi 3 running openHAB 2.1 stable installed via the repository installation path.
+
+My directory layout (These locations will be created in the instructions below):
+/data/scripts/openhab2backup - backup script
+/data/logs/ - backupscript log location
+/data/openhab2backup/ - local temporary backup location
+
+***Take note of the ()‘s below i.e. (YOUR BITBUCKET ACCOUNT NAME)…
+
+Create a Bitbucket account and a private repository called “openhab2backup”.
+
+Create key on raspberry pi:
+
+mkdir -p /root/.ssh
+chmod 0700 /root/.ssh
+ssh-keygen -t rsa -C „(YOUR E-MAIL ADDRESS)“
+Copy the contents of /root/.ssh/id_rsa.pub (starts with “ssh-rsa”) into the ssh key section for main user (your main account) of Bitbucket (not a deploy key as that’s read only).
+
+Test connection now from raspberry pi:
+
+ssh -T (YOUR BITBUCKET ACCOUNT NAME)@bitbucket.org
+Should see:
+
+root@rpi01:~/.ssh# ssh -T (YOUR BITBUCKET ACCOUNT NAME)@bitbucket.org
+logged in as (YOUR BITBUCKET ACCOUNT NAME).
+You can use git or hg to connect to Bitbucket. Shell access is disabled.
+root@rpi01:~/.ssh#
+Set default git config:
+
+#I just made up the user.name and user.email. It’s not really important.
+git config —global user.name „openhab2backup“
+git config —global user.email „openhab2backup@auto.com“
+git config —global push.default simple
+Create Backup Location:
+
+cd /data
+git clone git@bitbucket.org:(YOUR BITBUCKET ACCOUNT NAME)/openhab2backup.git
+ 
+#This will create the git directory - /data/openhab2backup
+Make temp local backup and perform first directory sync manually:
+
+mkdir -p /data/openhab2backup/configuration
+mkdir -p /data/openhab2backup/userdata
+mkdir -p /data/openhab2backup/runtime
+rsync -r /etc/openhab2 /data/openhab2backup/configuration
+rsync -r /var/lib/openhab2 /data/openhab2backup/userdata
+rsync -r /usr/share/openhab2 /data/openhab2backup/runtime
+Add untracked directories:
+
+#this will show tracked and untracked files:
+git status 
+cd /data/openhab2backup
+git add configuration 
+git add userdata
+git add runtime
+Git Commit:
+
+git commit -m “First Push”
+Git Push (Can take a while the first time):
+
+git push
+Check Bitbucket now to see if code was pushed up.
+
+Create file named “openhab2backup” and paste the contents below. Place in /data/scripts/
+
+ Create Cron:
+
+crontab -e
+Paste the following at the bottom and save.
+
+00 00 * * * /data/scripts/openhab2backup
+ 
+ 
